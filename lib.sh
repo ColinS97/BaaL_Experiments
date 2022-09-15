@@ -14,7 +14,7 @@ create_new_environment() {
     virtualenv $COMPUTE_WS_PATH/pyenv
     source $COMPUTE_WS_PATH/pyenv/bin/activate
     pip install torch==1.11.0+cu113 torchvision==0.12.0+cu113 -f https://download.pytorch.org/whl/torch_stable.html
-    pip install baal tqdm
+    pip install baal tqdm Pillow
 }
 
 remove_new_environment(){
@@ -25,7 +25,7 @@ remove_new_environment(){
 }
 
 create_or_reuse_environment() {
-    ENV_PATH=/lustre/ssd/ws/cosi765e-py39-cu11-torch-baal
+    ENV_PATH=/lustre/ssd/ws/cosi765e-py39-cu11-torch-baal-pillow
     if [ -d "$ENV_PATH" ] 
     then
         echo "Directory $ENV_PATH."
@@ -33,7 +33,7 @@ create_or_reuse_environment() {
 
     else
         echo "Directory $ENV_PATH does not exist."
-        create_new_environment py39-cu11-torch-baal
+        create_new_environment py39-cu11-torch-baal-pillow
     fi
     
     

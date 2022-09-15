@@ -17,6 +17,8 @@ from baal.active.active_loop import ActiveLearningLoop
 from baal.bayesian.dropout import patch_module
 from baal import ModelWrapper
 
+import aug_lib
+
 """
 Minimal example to use BaaL.
 """
@@ -40,8 +42,7 @@ def get_datasets(initial_pool):
     transform = transforms.Compose(
         [
             transforms.Resize((224, 224)),
-            transforms.RandomHorizontalFlip(),
-            transforms.RandomRotation(30),
+            aug_lib.TrivialAugment(),
             transforms.ToTensor(),
             transforms.Normalize(3 * [0.5], 3 * [0.5]),
         ]
@@ -61,7 +62,9 @@ def get_datasets(initial_pool):
         ".", train=False, transform=test_transform, target_transform=None, download=True
     )
 
-    active_set = ActiveLearningDataset(train_ds, pool_specifics={"transform": test_transform})
+    active_set = ActiveLearningDataset(
+        train_ds, pool_specifics={"transform": test_transform}
+    )
 
     # We start labeling randomly.
     active_set.label_randomly(initial_pool)
@@ -84,7 +87,9 @@ def main():
     heuristic = get_heuristic(hyperparams["heuristic"], hyperparams["shuffle_prop"])
     criterion = CrossEntropyLoss()
     model = vgg16(pretrained=False, num_classes=10)
-    weights = load_state_dict_from_url("https://download.pytorch.org/models/vgg16-397923af.pth")
+    weights = load_state_dict_from_url(
+        "https://download.pytorch.org/models/vgg16-397923af.pth"
+    )
     weights = {k: v for k, v in weights.items() if "classifier.6" not in k}
     model.load_state_dict(weights, strict=False)
 

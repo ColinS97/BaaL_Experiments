@@ -20,6 +20,6 @@ source lib.sh
 
 create_or_reuse_environment
 
-cd /home/"$USER"/scratch/BAAL_EXPERIMENTS/
+cd /home/"$USER"/scratch/BaaL_EXPERIMENTS/
 
 python vgg_mcdropout_cifar10.py
