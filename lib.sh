@@ -14,7 +14,7 @@ create_new_environment() {
     virtualenv $COMPUTE_WS_PATH/pyenv
     source $COMPUTE_WS_PATH/pyenv/bin/activate
     pip install torch==1.11.0+cu113 torchvision==0.12.0+cu113 -f https://download.pytorch.org/whl/torch_stable.html
-    pip install baal
+    pip install baal tqdm
 }
 
 remove_new_environment(){
