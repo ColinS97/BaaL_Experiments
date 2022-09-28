@@ -19,144 +19,11 @@ from baal import ModelWrapper
 
 import aug_lib
 
+from baal_extended.ExtendedActiveLearningDataset import ExtendedActiveLearningDataset
+
 """
 Minimal example to use BaaL.
 """
-
-
-class ExtendedActiveLearningDataset(ActiveLearningDataset):
-    """A dataset that allows for active learning and working with augmentations.
-    Args:
-        dataset: The baseline dataset.
-        labelled: An array that acts as a mask which is greater than 1 for every
-            data point that is labelled, and 0 for every data point that is not
-            labelled.
-        make_unlabelled: The function that returns an
-            unlabelled version of a datum so that it can still be used in the DataLoader.
-        random_state: Set the random seed for label_randomly().
-        pool_specifics: Attributes to set when creating the pool.
-                                         Useful to remove data augmentation.
-        last_active_steps: If specified, will iterate over the last active steps
-                            instead of the full dataset. Useful when doing partial finetuning.
-        augmented_map: A map that indicates which data points are augmented. 0 is for original unaugmented images. Non Zero will reference the pool index of the original image
-
-    Notes:
-        n_augmented_images_labelled: This value describes how often an augmented image was recommended by the active learning algorithm to be labelled.
-                                     If you label an image with the standard label function it will also label the original label but only increase the count for unlabelled.
-    """
-
-    def __init__(
-        self,
-        dataset: Dataset,
-        labelled: Optional[np.ndarray] = None,
-        make_unlabelled: Callable = _identity,
-        random_state=None,
-        pool_specifics: Optional[dict] = None,
-        last_active_steps: int = -1,
-        augmented_map: Optional[np.ndarray] = None,
-    ) -> None:
-        if augmented_map is None:
-            self.augmented_map = np.zeros(len(dataset), dtype=int)
-        self.unaugmented_pool_size = len(dataset)
-        self.n_augmented_images_labelled = 0
-        self.n_unaugmented_images_labelled = 0
-        super().__init__(
-            dataset=dataset,
-            labelled=labelled,
-            make_unlabelled=make_unlabelled,
-            random_state=random_state,
-            pool_specifics=pool_specifics,
-            last_active_steps=last_active_steps,
-        )
-
-    def can_augment(self) -> bool:
-        return True
-
-    @property
-    def n_unaugmented(self):
-        """The number of unaugmented data points."""
-        return (~self.augmented).sum()
-
-    @property
-    def n_augmented(self):
-        """The number of augmented data points."""
-        return self.augmented.sum()
-
-    @property
-    def augmented(self):
-        """An array that acts as a boolean mask which is True for every
-        data point that is labelled, and False for every data point that is not
-        labelled."""
-        return self.augmented_map.astype(bool)
-
-    def augment_n_times(self, n, augmented_dataset=None) -> None:
-        """Augment the every image in the dataset n times and append those augmented images to the end of the dataset
-        Currently only works if an augmented version of the dataset is already present and n=1"""
-        if self.n_augmented != 0:
-            raise ValueError("The dataset has already been augmented.")
-        if augmented_dataset == None:
-            dataset_copy = deepcopy(self._dataset)
-        else:
-            dataset_copy = augmented_dataset
-        while n > 0:
-            # print("type before"+str(type(self._dataset)))
-            self.labelled_map = np.concatenate((self.labelled_map, self.labelled_map))
-            self.augmented_map = np.concatenate(
-                (self.augmented_map, np.arange(len(self.augmented_map)))
-            )
-            self._dataset = self._dataset.__add__(dataset_copy)
-            # print(len(dataset_copy))
-            n -= 1
-
-    def get_augmented_ids_of_image(self, idx):
-        if self.is_augmentation(idx):
-            raise ValueError(
-                "The idx given responds to an augmented image, please specify an id that responds to an unaugmented image!"
-            )
-        augmented_ids = np.where(self.augmented_map == idx)
-        # print(type(augmented_ids))
-        return augmented_ids
-
-    def is_augmentation(self, idx) -> bool:
-        if self.augmented_map[idx] != 0:
-            return True
-        else:
-            return False
-
-    def label(self, idx):
-        """
-        Overriding the label function of ActiveLearningDataset.
-        Use this function if you want to automatically label all augmentations and the original image.
-        Use label after the dataset has been augmented
-
-        Args:
-            index: one or many indices to label, relative to the pool index and not the dataset index.
-
-        Raises:
-            ValueError if the indices do not match the values or
-             if no `value` is provided and `can_label` is True.
-        """
-        oracle_idx = self._pool_to_oracle_index(idx)
-        if self.is_augmentation(oracle_idx):
-            self.n_augmented_images_labelled += 1
-            idx = self.augmented_map[oracle_idx]
-        else:
-            self.n_unaugmented_images_labelled += 1
-
-        for id in self.get_augmented_ids_of_image(oracle_idx):
-            super().label(self._oracle_to_pool_index(id))
-        super().label(idx)
-
-    def label_just_this_id(self, idx):
-        """
-        Can be used to label just the id provided and not the augmentations.
-        It is recommended to not mix using this label function with the normal label function.
-        """
-        if self.is_augmentation(idx):
-            self.n_augmented_images_labelled += 1
-        else:
-            self.n_unaugmented_images_labelled += 1
-        super().label(idx)
 
 
 def parse_args():
@@ -208,13 +75,13 @@ def get_datasets(initial_pool):
         ".", train=False, transform=test_transform, target_transform=None, download=True
     )
     eald_set = ExtendedActiveLearningDataset(train_ds)
-    active_set = ActiveLearningDataset(
-        train_ds, pool_specifics={"transform": test_transform}
-    )
-
+    # active_set = ActiveLearningDataset(
+    #    train_ds, pool_specifics={"transform": test_transform}
+    # )
+    eald_set.augment_n_times(2, augmented_dataset=aug_train_ds)
     # We start labeling randomly.
-    active_set.label_randomly(initial_pool)
-    return active_set, test_set
+    eald_set.label_randomly(initial_pool)
+    return eald_set, test_set
 
 
 def main():
@@ -290,6 +157,8 @@ def main():
             "epoch": epoch,
             "train": metrics["train_loss"].value,
             "labeled_data": active_set.labelled,
+            "n_augmented_images_labelled": active_set.n_augmented_images_labelled,
+            "n_unaugmented_images_labelled": active_set.n_unaugmented_images_labelled,
             "Next Training set size": len(active_set),
         }
         print(logs)
