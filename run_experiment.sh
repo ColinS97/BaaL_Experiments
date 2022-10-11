@@ -7,7 +7,7 @@
 #SBATCH --mem=8000
 #SBATCH --mincpus=1
 #SBATCH --time=24:00:00                             
-#SBATCH --job-name=vgg_mcdropout_cifar10
+#SBATCH --job-name=vgg_mcdropout_augmented_cifar10
 #SBATCH --mail-type=end
 #SBATCH --mail-user=colin.simon@mailbox.tu-dresden.de
 #SBATCH --output=output-%j.out
@@ -22,4 +22,4 @@ create_or_reuse_environment
 
 cd /home/"$USER"/scratch/BaaL_EXPERIMENTS/
 
-python vgg_mcdropout_cifar10.py
+python vgg_mcdropout_augmented_cifar10.py

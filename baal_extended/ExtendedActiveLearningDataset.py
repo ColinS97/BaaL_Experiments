@@ -51,6 +51,7 @@ class ExtendedActiveLearningDataset(ActiveLearningDataset):
         self.unaugmented_pool_size = len(dataset)
         self.n_augmented_images_labelled = 0
         self.n_unaugmented_images_labelled = 0
+        self.augmented_n_times = 0
         super().__init__(
             dataset=dataset,
             labelled=labelled,
@@ -78,7 +79,15 @@ class ExtendedActiveLearningDataset(ActiveLearningDataset):
         """An array that acts as a boolean mask which is True for every
         data point that is labelled, and False for every data point that is not
         labelled."""
-        return self.augmented_map.astype(bool)
+        orig_len = self.unaugmented_pool_size
+        print("orig len" + str(orig_len))
+        print("augmented n times" + str(self.augmented_n_times))
+        return np.concatenate(
+            (
+                np.zeros(orig_len),
+                np.ones(orig_len * self.augmented_n_times),
+            )
+        ).astype(bool)
 
     def augment_n_times(self, n, augmented_dataset=None) -> None:
         """Augment the every image in the dataset n times and append those augmented images to the end of the dataset
@@ -87,6 +96,7 @@ class ExtendedActiveLearningDataset(ActiveLearningDataset):
         augmented_map_extender = np.arange(len(self.augmented_map))
         if self.n_augmented != 0:
             raise ValueError("The dataset has already been augmented.")
+        self.augmented_n_times = n
         if augmented_dataset == None:
             dataset_copy = deepcopy(self._dataset)
         else:
