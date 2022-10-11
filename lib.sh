@@ -25,7 +25,7 @@ remove_new_environment(){
 }
 
 create_or_reuse_environment() {
-    ENV_PATH=/lustre/ssd/ws/cosi765e-py39-cu11-torch-baal-pillow
+    ENV_PATH=/lustre/ssd/ws/"$USER"-py39-cu11-torch-baal-pillow
     if [ -d "$ENV_PATH" ] 
     then
         echo "Directory $ENV_PATH."
