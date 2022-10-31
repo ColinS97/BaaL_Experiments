@@ -4,7 +4,7 @@
 #SBATCH --partition=alpha
 #SBATCH --nodes=1                   
 #SBATCH --gres=gpu:1
-#SBATCH --mem=8000
+#SBATCH --mem=16000
 #SBATCH --mincpus=1
 #SBATCH --time=24:00:00                             
 #SBATCH --job-name=vgg_mcdropout_augmented_cifar10
