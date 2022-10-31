@@ -22,4 +22,4 @@ create_or_reuse_environment
 
 cd /home/"$USER"/scratch/BaaL_EXPERIMENTS/
 
-python vgg_mcdropout_augmented_cifar10.py
+python cifarnet_mcdropout_augmented_cifar10.py
