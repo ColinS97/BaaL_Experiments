@@ -1,5 +1,5 @@
 from torch import nn
-from torch import F
+import nn.functional as F
 
 
 class CIFAR10Net(nn.Module):
