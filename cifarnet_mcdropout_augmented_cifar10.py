@@ -200,7 +200,7 @@ def main():
         optimizer = optim.SGD(model.parameters(), lr=hyperparams["lr"], momentum=0.9)
 
         # Wraps the model into a usable API.
-        model = ModelWrapper(model, criterion)
+        model = ModelWrapper(model, criterion, replicate_in_memory=False)
 
         logs = {}
         logs["epoch"] = 0
