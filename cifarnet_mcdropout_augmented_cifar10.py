@@ -35,10 +35,10 @@ Minimal example to use BaaL.
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--epoch", default=100, type=int)
+    parser.add_argument("--epoch", default=50, type=int)
     parser.add_argument("--batch_size", default=32, type=int)
     parser.add_argument("--initial_pool", default=1000, type=int)
-    parser.add_argument("--query_size", default=100, type=int)
+    parser.add_argument("--query_size", default=50, type=int)
     parser.add_argument("--lr", default=0.001)
     parser.add_argument("--heuristic", default="bald", type=str)
     parser.add_argument("--iterations", default=20, type=int)
@@ -65,7 +65,7 @@ def get_datasets(initial_pool):
     )
     test_transform = transforms.Compose(
         [
-            transforms.Resize((224, 224)),
+            # transforms.Resize((224, 224)),
             transforms.ToTensor(),
             transforms.Normalize(3 * [0.5], 3 * [0.5]),
         ]
