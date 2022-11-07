@@ -14,7 +14,7 @@
 #SBATCH --error=output-%j.out
 
 module --force purge                          				
-module load modenv/hiera CUDA/11.3.1 GCC/11.2.0 Python/3.9.6
+module load modenv/hiera CUDA/11.7.0 GCCcore/11.3.0 Python/3.10.4
 
 source lib.sh
 
@@ -22,4 +22,4 @@ create_or_reuse_environment
 
 cd /home/"$USER"/scratch/BaaL_EXPERIMENTS/
 
-python cifarnet_mcdropout_augmented_cifar10.py
+python ../cifarnet_mcdropout_augmented_cifar10.py
