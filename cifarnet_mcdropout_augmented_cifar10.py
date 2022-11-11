@@ -85,7 +85,7 @@ def get_datasets(initial_pool):
     # active_set = ActiveLearningDataset(
     #    train_ds, pool_specifics={"transform": test_transform}
     # )
-    eald_set.augment_n_times(2, augmented_dataset=aug_train_ds)
+    eald_set.augment_n_times(1, augmented_dataset=aug_train_ds)
     # We start labeling randomly.
     eald_set.label_randomly(initial_pool)
     return eald_set, test_set
@@ -164,133 +164,139 @@ def main():
 
     now = datetime.datetime.now()
     dt_string = now.strftime("%d%m%Y%Hx%M")
-    with open("metrics_cifarnet" + dt_string + ".csv", "w+", newline="") as out_file:
-        csvwriter = csv.writer(out_file)
+    out_file = open("metrics_cifarnet" + dt_string + ".csv", "w+", newline="")
+    csvwriter = csv.writer(out_file)
+    csvwriter.writerow(
+        (
+            "epoch",
+            "val_acc",
+            "train_acc",
+            "active_set.labelled",
+            "active_set.n_augmented_images_labelled",
+            "active_set.n_unaugmented_images_labelled",
+            "len(active_set)",
+        )
+    )
+
+    hyperparams = vars(args)
+
+    active_set, test_set = get_datasets(hyperparams["initial_pool"])
+
+    heuristic = get_heuristic(hyperparams["heuristic"], hyperparams["shuffle_prop"])
+    criterion = CrossEntropyLoss()
+    model = CIFAR10Net()
+    # model = vgg16(pretrained=False, num_classes=10)
+    # weights = load_state_dict_from_url(
+    #    "https://download.pytorch.org/models/vgg16-397923af.pth"
+    # )
+    # weights = {k: v for k, v in weights.items() if "classifier.6" not in k}
+    # model.load_state_dict(weights, strict=False)
+
+    # change dropout layer to MCDropout
+    model = patch_module(model)
+
+    if use_cuda:
+        model.cuda()
+    optimizer = optim.SGD(model.parameters(), lr=hyperparams["lr"], momentum=0.9)
+
+    # Wraps the model into a usable API.
+    model = ModelWrapper(model, criterion, replicate_in_memory=False)
+    model.add_metric(name="accuracy", initializer=lambda: Accuracy())
+
+    logs = {}
+    logs["epoch"] = 0
+
+    # for prediction we use a smaller batchsize
+    # since it is slower
+    active_loop = ActiveLearningLoop(
+        active_set,
+        model.predict_on_dataset,
+        heuristic,
+        hyperparams.get("query_size", 1),
+        batch_size=10,
+        iterations=hyperparams["iterations"],
+        use_cuda=use_cuda,
+    )
+    # We will reset the weights at each active learning step.
+    init_weights = deepcopy(model.state_dict())
+
+    layout = {
+        "Loss/Accuracy": {
+            "Loss": ["Multiline", ["loss/train", "loss/test"]],
+            "Accuracy": [
+                "Multiline",
+                ["accuracy/train", "accuracy/test"],
+            ],
+        },
+    }
+
+    tensorboardwriter = SummaryWriter("tb-results" + dt_string + "/testrun")
+    tensorboardwriter.add_custom_scalars(layout)
+
+    for epoch in tqdm(range(args.epoch)):
+        # Load the initial weights.
+        model.load_state_dict(init_weights)
+        model.train_on_dataset(
+            active_set,
+            optimizer,
+            hyperparams["batch_size"],
+            hyperparams["learning_epoch"],
+            use_cuda,
+        )
+
+        # Validation!
+        model.test_on_dataset(test_set, hyperparams["batch_size"], use_cuda)
+        metrics = model.metrics
+        should_continue = active_loop.step()
+        if not should_continue:
+            break
+
+        test_acc = metrics["test_accuracy"].value
+        train_acc = metrics["train_accuracy"].value
+        test_loss = metrics["test_loss"].value
+        train_loss = metrics["train_loss"].value
+
+        logs = {
+            "epoch": epoch,
+            "test_acc": test_acc,
+            "train_acc": train_acc,
+            "test_loss": test_loss,
+            "train_loss": train_loss,
+            "Next training size": active_set.n_labelled,
+            "amount original images labelled": active_set.n_augmented_images_labelled,
+            "amount augmented images labelled": active_set.n_unaugmented_images_labelled,
+        }
+        print(logs)
+
         csvwriter.writerow(
             (
-                "epoch",
-                "val_acc",
-                "train_acc",
-                "active_set.labelled",
-                "active_set.n_augmented_images_labelled",
-                "active_set.n_unaugmented_images_labelled",
-                "len(active_set)",
+                epoch,
+                test_acc,
+                train_acc,
+                test_loss,
+                train_loss,
+                active_set.n_labelled,
+                active_set.n_augmented_images_labelled,
+                active_set.n_unaugmented_images_labelled,
             )
         )
 
-        hyperparams = vars(args)
-
-        active_set, test_set = get_datasets(hyperparams["initial_pool"])
-
-        heuristic = get_heuristic(hyperparams["heuristic"], hyperparams["shuffle_prop"])
-        criterion = CrossEntropyLoss()
-        model = CIFAR10Net()
-        # model = vgg16(pretrained=False, num_classes=10)
-        # weights = load_state_dict_from_url(
-        #    "https://download.pytorch.org/models/vgg16-397923af.pth"
-        # )
-        # weights = {k: v for k, v in weights.items() if "classifier.6" not in k}
-        # model.load_state_dict(weights, strict=False)
-
-        # change dropout layer to MCDropout
-        model = patch_module(model)
-
-        if use_cuda:
-            model.cuda()
-        optimizer = optim.SGD(model.parameters(), lr=hyperparams["lr"], momentum=0.9)
-
-        # Wraps the model into a usable API.
-        model = ModelWrapper(model, criterion, replicate_in_memory=False)
-
-        logs = {}
-        logs["epoch"] = 0
-
-        # for prediction we use a smaller batchsize
-        # since it is slower
-        active_loop = ActiveLearningLoop(
-            active_set,
-            model.predict_on_dataset,
-            heuristic,
-            hyperparams.get("query_size", 1),
-            batch_size=10,
-            iterations=hyperparams["iterations"],
-            use_cuda=use_cuda,
+        tensorboardwriter.add_scalar("loss/train", metrics["train_loss"].value, epoch)
+        tensorboardwriter.add_scalar("loss/test", metrics["test_loss"].value, epoch)
+        tensorboardwriter.add_scalar(
+            "accuracy/train", metrics["train_accuracy"].value, epoch
         )
-        # We will reset the weights at each active learning step.
-        init_weights = deepcopy(model.state_dict())
-
-        layout = {
-            "Loss/Accuracy": {
-                "Loss": ["Multiline", ["loss/train", "loss/test", "loss/val"]],
-                "Accuracy": [
-                    "Multiline",
-                    ["accuracy/train", "accuracy/test", "accuracy/val"],
-                ],
-            },
-        }
-
-        tensorboardwriter = SummaryWriter("tb-results" + dt_string + "/testrun")
-        tensorboardwriter.add_custom_scalars(layout)
-
-        for epoch in tqdm(range(args.epoch)):
-            # Load the initial weights.
-            model.load_state_dict(init_weights)
-            model.train_on_dataset(
-                active_set,
-                optimizer,
-                hyperparams["batch_size"],
-                hyperparams["learning_epoch"],
-                use_cuda,
-            )
-
-            # Validation!
-            model.test_on_dataset(test_set, hyperparams["batch_size"], use_cuda)
-            metrics = model.metrics
-            should_continue = active_loop.step()
-            if not should_continue:
-                break
-
-            val_acc = metrics["test_acc"].value
-            logs = {
-                "epoch": epoch,
-                "val_acc": val_acc,
-                "train_acc": metrics["train_accuracy"].value,
-                "labeled_data": active_set.labelled,
-                "n_augmented_images_labelled": active_set.n_augmented_images_labelled,
-                "n_unaugmented_images_labelled": active_set.n_unaugmented_images_labelled,
-                "Next Training set size": len(active_set),
-            }
-            print(logs)
-
-            csvwriter.write(
-                (
-                    epoch,
-                    val_acc,
-                    metrics["train_accuracy"].value,
-                    active_set.labelled,
-                    active_set.n_augmented_images_labelled,
-                    active_set.n_unaugmented_images_labelled,
-                    len(active_set),
-                )
-            )
-
-            tensorboardwriter.add_scalar(
-                "loss/train", metrics["train_loss"].value, epoch
-            )
-            tensorboardwriter.add_scalar("loss/test", metrics["test_loss"].value, epoch)
-            tensorboardwriter.add_scalar(
-                "accuracy/train", metrics["train_accuracy"].value, epoch
-            )
-            tensorboardwriter.add_scalar(
-                "accuracy/test", metrics["test_accuracy"].value, epoch
-            )
-            tensorboardwriter.add_scalar(
-                "accuracy/train", metrics["validation_accuracy"].value, epoch
-            )
-            tensorboardwriter.add_scalar(
-                "accuracy/test", metrics["validation_accuracy"].value, epoch
-            )
-        tensorboardwriter.close()
+        tensorboardwriter.add_scalar(
+            "accuracy/test", metrics["test_accuracy"].value, epoch
+        )
+        tensorboardwriter.add_scalar(
+            "accuracy/train", metrics["validation_accuracy"].value, epoch
+        )
+        tensorboardwriter.add_scalar(
+            "accuracy/test", metrics["validation_accuracy"].value, epoch
+        )
+    tensorboardwriter.close()
+    out_file.close()
 
 
 if __name__ == "__main__":
