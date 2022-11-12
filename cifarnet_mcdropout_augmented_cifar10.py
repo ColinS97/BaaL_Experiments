@@ -290,12 +290,6 @@ def main():
         tensorboardwriter.add_scalar(
             "accuracy/test", metrics["test_accuracy"].value, epoch
         )
-        tensorboardwriter.add_scalar(
-            "accuracy/train", metrics["validation_accuracy"].value, epoch
-        )
-        tensorboardwriter.add_scalar(
-            "accuracy/test", metrics["validation_accuracy"].value, epoch
-        )
     tensorboardwriter.close()
     out_file.close()
 
