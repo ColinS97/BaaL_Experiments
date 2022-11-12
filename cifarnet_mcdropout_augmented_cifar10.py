@@ -22,6 +22,7 @@ from baal.active import get_heuristic, ActiveLearningDataset
 from baal.active.active_loop import ActiveLearningLoop
 from baal.bayesian.dropout import patch_module
 from baal import ModelWrapper
+from baal.utils.metrics import Accuracy
 
 import aug_lib
 
