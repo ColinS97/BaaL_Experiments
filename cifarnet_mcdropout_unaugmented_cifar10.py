@@ -46,7 +46,7 @@ def parse_args():
     parser.add_argument("--iterations", default=20, type=int)
     parser.add_argument("--shuffle_prop", default=0.05, type=float)
     parser.add_argument("--learning_epoch", default=5, type=int)
-    parser.add_argument("--augment", default=1, type=int)
+    parser.add_argument("--augment", default=0, type=int)
     return parser.parse_args()
 
 
@@ -84,15 +84,13 @@ def get_datasets(initial_pool, n_augmentations):
     test_set = datasets.CIFAR10(
         ".", train=False, transform=test_transform, target_transform=None, download=True
     )
-    eald_set = ExtendedActiveLearningDataset(train_ds)
+    # eald_set = ExtendedActiveLearningDataset(train_ds)
 
-    # active_set = ActiveLearningDataset(
-    #    train_ds, pool_specifics={"transform": test_transform}
-    # )
-    eald_set.augment_n_times(n_augmentations, augmented_dataset=aug_train_ds)
+    active_set = ActiveLearningDataset(train_ds)
+    # eald_set.augment_n_times(n_augmentations, augmented_dataset=aug_train_ds)
     # We start labeling randomly.
-    eald_set.label_randomly(initial_pool)
-    return eald_set, test_set
+    active_set.label_randomly(initial_pool)
+    return active_set, test_set
 
 
 class CIFAR10Net(nn.Module):
@@ -180,8 +178,6 @@ def main():
             "val_acc",
             "train_acc",
             "active_set.labelled",
-            "active_set.n_augmented_images_labelled",
-            "active_set.n_unaugmented_images_labelled",
             "len(active_set)",
         )
     )
@@ -195,12 +191,6 @@ def main():
     heuristic = get_heuristic(hyperparams["heuristic"], hyperparams["shuffle_prop"])
     criterion = CrossEntropyLoss()
     model = CIFAR10Net()
-    # model = vgg16(pretrained=False, num_classes=10)
-    # weights = load_state_dict_from_url(
-    #    "https://download.pytorch.org/models/vgg16-397923af.pth"
-    # )
-    # weights = {k: v for k, v in weights.items() if "classifier.6" not in k}
-    # model.load_state_dict(weights, strict=False)
 
     # change dropout layer to MCDropout
     model = patch_module(model)
@@ -279,22 +269,11 @@ def main():
             "test_loss": test_loss,
             "train_loss": train_loss,
             "Next training size": active_set.n_labelled,
-            "amount original images labelled": active_set.n_augmented_images_labelled,
-            "amount augmented images labelled": active_set.n_unaugmented_images_labelled,
         }
         print(logs)
 
         csvwriter.writerow(
-            (
-                epoch,
-                test_acc,
-                train_acc,
-                test_loss,
-                train_loss,
-                active_set.n_labelled,
-                active_set.n_augmented_images_labelled,
-                active_set.n_unaugmented_images_labelled,
-            )
+            (epoch, test_acc, train_acc, test_loss, train_loss, active_set.n_labelled)
         )
 
         tensorboardwriter.add_scalar("loss/train", metrics["train_loss"].value, epoch)
