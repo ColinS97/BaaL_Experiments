@@ -24,4 +24,4 @@ create_or_reuse_environment
 
 cd /home/"$USER"/scratch/BaaL_EXPERIMENTS/
 
-python ../cifarnet_mcdropout_augmented_cifar10.py --augment 0 --epoch 100
+python ../cifarnet_mcdropout_unaugmented_cifar10.py --augment 0 --epoch 100
