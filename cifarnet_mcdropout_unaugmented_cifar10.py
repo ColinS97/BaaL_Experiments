@@ -167,7 +167,7 @@ def main():
     now = datetime.datetime.now()
     dt_string = now.strftime("%d%m%Y%Hx%M")
     out_file = open(
-        "metrics_cifarnet_augment" + args.augment + "_" + dt_string + ".csv",
+        "metrics_cifarnet_augment" + str(args.augment) + "_" + dt_string + ".csv",
         "w+",
         newline="",
     )
@@ -231,7 +231,7 @@ def main():
     }
 
     tensorboardwriter = SummaryWriter(
-        "tb_metrics_cifarnet_augment" + args.augment + "_" + dt_string + "/testrun"
+        "tb_metrics_cifarnet_augment" + str(args.augment) + "_" + dt_string + "/testrun"
     )
     tensorboardwriter.add_custom_scalars(layout)
 
