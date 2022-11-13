@@ -45,10 +45,11 @@ def parse_args():
     parser.add_argument("--iterations", default=20, type=int)
     parser.add_argument("--shuffle_prop", default=0.05, type=float)
     parser.add_argument("--learning_epoch", default=5, type=int)
+    parser.add_argument("--augment", default=1, type=int)
     return parser.parse_args()
 
 
-def get_datasets(initial_pool):
+def get_datasets(initial_pool, n_augmentations):
     transform = transforms.Compose(
         [
             # transforms.Resize((224, 224)),
@@ -86,7 +87,7 @@ def get_datasets(initial_pool):
     # active_set = ActiveLearningDataset(
     #    train_ds, pool_specifics={"transform": test_transform}
     # )
-    eald_set.augment_n_times(1, augmented_dataset=aug_train_ds)
+    eald_set.augment_n_times(n_augmentations, augmented_dataset=aug_train_ds)
     # We start labeling randomly.
     eald_set.label_randomly(initial_pool)
     return eald_set, test_set
@@ -181,7 +182,9 @@ def main():
 
     hyperparams = vars(args)
 
-    active_set, test_set = get_datasets(hyperparams["initial_pool"])
+    active_set, test_set = get_datasets(
+        hyperparams["initial_pool"], hyperparams["augment"]
+    )
 
     heuristic = get_heuristic(hyperparams["heuristic"], hyperparams["shuffle_prop"])
     criterion = CrossEntropyLoss()
