@@ -247,7 +247,7 @@ def main():
     for epoch in tqdm(range(args.epoch + 1)):
         # if we are in the last round we want to train for longer epochs to get a more comparable result
         if epoch == args.epoch:
-            hyperparams["learning_epoch"] = 100
+            hyperparams["learning_epoch"] = 75
 
         # Load the initial weights.
         model.load_state_dict(init_weights)
