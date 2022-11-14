@@ -172,15 +172,7 @@ def main():
         newline="",
     )
     csvwriter = csv.writer(out_file)
-    csvwriter.writerow(
-        (
-            "epoch",
-            "val_acc",
-            "train_acc",
-            "active_set.labelled",
-            "len(active_set)",
-        )
-    )
+    csvwriter.writerow(("epoch", "test_acc", "train_acc", "active_set.labelled"))
 
     hyperparams = vars(args)
 
@@ -266,15 +258,11 @@ def main():
             "epoch": epoch,
             "test_acc": test_acc,
             "train_acc": train_acc,
-            "test_loss": test_loss,
-            "train_loss": train_loss,
-            "Next training size": active_set.n_labelled,
+            "n_labelled": active_set.n_labelled,
         }
         print(logs)
 
-        csvwriter.writerow(
-            (epoch, test_acc, train_acc, test_loss, train_loss, active_set.n_labelled)
-        )
+        csvwriter.writerow((epoch, test_acc, train_acc, active_set.n_labelled))
 
         tensorboardwriter.add_scalar("loss/train", metrics["train_loss"].value, epoch)
         tensorboardwriter.add_scalar("loss/test", metrics["test_loss"].value, epoch)

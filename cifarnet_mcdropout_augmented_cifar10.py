@@ -177,12 +177,11 @@ def main():
     csvwriter.writerow(
         (
             "epoch",
-            "val_acc",
+            "test_acc",
             "train_acc",
             "active_set.labelled",
             "active_set.n_augmented_images_labelled",
             "active_set.n_unaugmented_images_labelled",
-            "len(active_set)",
         )
     )
 
@@ -276,8 +275,6 @@ def main():
             "epoch": epoch,
             "test_acc": test_acc,
             "train_acc": train_acc,
-            "test_loss": test_loss,
-            "train_loss": train_loss,
             "Next training size": active_set.n_labelled,
             "amount original images labelled": active_set.n_augmented_images_labelled,
             "amount augmented images labelled": active_set.n_unaugmented_images_labelled,
@@ -289,8 +286,6 @@ def main():
                 epoch,
                 test_acc,
                 train_acc,
-                test_loss,
-                train_loss,
                 active_set.n_labelled,
                 active_set.n_augmented_images_labelled,
                 active_set.n_unaugmented_images_labelled,
