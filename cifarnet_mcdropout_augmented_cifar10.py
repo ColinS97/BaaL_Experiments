@@ -312,7 +312,9 @@ def get_oracle_index_and_uncertainty(active_loop, active_set):
     pool_indices, uncertainty = active_loop.heuristic.get_ranks(probs)
     oracle_indices = active_set._pool_to_oracle_index(pool_indices)
 
-    if active_set.pool[pool_indices[0]] == active_set._dataset[oracle_indices[0]]:
+    if torch.equal(
+        active_set.pool[pool_indices[0]], active_set._dataset[oracle_indices[0]]
+    ):
         print("oracle and pool are in sync")
         exit()
     else:
