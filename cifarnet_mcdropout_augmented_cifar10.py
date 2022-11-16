@@ -263,13 +263,16 @@ def main():
         model.test_on_dataset(test_set, hyperparams["batch_size"], use_cuda)
         metrics = model.metrics
         should_continue = active_loop.step()
+
+        oracle_indices, uncertainty = get_oracle_index_and_uncertainty(
+            active_loop, active_set
+        )
+
         if not should_continue:
             break
 
         test_acc = metrics["test_accuracy"].value
         train_acc = metrics["train_accuracy"].value
-        test_loss = metrics["test_loss"].value
-        train_loss = metrics["train_loss"].value
 
         logs = {
             "epoch": epoch,
@@ -302,6 +305,21 @@ def main():
         )
     tensorboardwriter.close()
     out_file.close()
+
+
+def get_oracle_index_and_uncertainty(active_loop, active_set):
+    probs = active_loop.get_probabilities(active_set.pool, **active_loop.kwargs)
+    pool_indices, uncertainty = active_loop.heuristic.get_ranks(probs)
+    oracle_indices = active_set._pool_to_oracle_index(pool_indices)
+
+    if active_set.pool[pool_indices[0]] == active_set._dataset[oracle_indices[0]]:
+        print("oracle and pool are in sync")
+        exit()
+    else:
+        print("not in sync")
+        exit()
+
+    return oracle_indices, uncertainty
 
 
 if __name__ == "__main__":
