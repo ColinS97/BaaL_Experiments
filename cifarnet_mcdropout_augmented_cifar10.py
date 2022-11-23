@@ -78,18 +78,18 @@ def get_datasets(initial_pool, n_augmentations):
     train_ds = datasets.CIFAR10(
         ".", train=True, transform=transform, target_transform=None, download=True
     )
-    train_ds = torch.utils.data.Subset(train_ds, range(0, 100))
+    # train_ds = torch.utils.data.Subset(train_ds, range(0, 100))
 
     aug_train_ds = datasets.CIFAR10(
         ".", train=True, transform=aug_transform, target_transform=None, download=True
     )
 
-    aug_train_ds = torch.utils.data.Subset(aug_train_ds, range(0, 100))
+    # aug_train_ds = torch.utils.data.Subset(aug_train_ds, range(0, 100))
     test_set = datasets.CIFAR10(
         ".", train=False, transform=test_transform, target_transform=None, download=True
     )
 
-    test_set = torch.utils.data.Subset(test_set, range(0, 100))
+    # test_set = torch.utils.data.Subset(test_set, range(0, 100))
     eald_set = ExtendedActiveLearningDataset(train_ds)
 
     # active_set = ActiveLearningDataset(
