@@ -17,12 +17,15 @@ from torchvision.transforms import transforms
 from tqdm import tqdm
 from torch import nn
 import torch.nn.functional as F
+import pickle
 
 from baal.active import get_heuristic, ActiveLearningDataset
 from baal.active.active_loop import ActiveLearningLoop
 from baal.bayesian.dropout import patch_module
 from baal import ModelWrapper
 from baal.utils.metrics import Accuracy
+
+pjoin = os.path.join
 
 import aug_lib
 
@@ -37,16 +40,16 @@ Minimal example to use BaaL.
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--epoch", default=50, type=int)
-    parser.add_argument("--batch_size", default=32, type=int)
-    parser.add_argument("--initial_pool", default=1000, type=int)
-    parser.add_argument("--query_size", default=50, type=int)
+    parser.add_argument("--epoch", default=10, type=int)
+    parser.add_argument("--batch_size", default=6, type=int)
+    parser.add_argument("--initial_pool", default=10, type=int)
+    parser.add_argument("--query_size", default=10, type=int)
     parser.add_argument("--lr", default=0.001)
     parser.add_argument("--heuristic", default="bald", type=str)
-    parser.add_argument("--iterations", default=20, type=int)
+    parser.add_argument("--iterations", default=5, type=int)
     parser.add_argument("--shuffle_prop", default=0.05, type=float)
-    parser.add_argument("--learning_epoch", default=5, type=int)
-    parser.add_argument("--augment", default=1, type=int)
+    parser.add_argument("--learning_epoch", default=3, type=int)
+    parser.add_argument("--augment", default=2, type=int)
     return parser.parse_args()
 
 
@@ -77,13 +80,18 @@ def get_datasets(initial_pool, n_augmentations):
     train_ds = datasets.CIFAR10(
         ".", train=True, transform=transform, target_transform=None, download=True
     )
+    train_ds = torch.utils.data.Subset(train_ds, range(0, 100))
 
     aug_train_ds = datasets.CIFAR10(
         ".", train=True, transform=aug_transform, target_transform=None, download=True
     )
+
+    aug_train_ds = torch.utils.data.Subset(aug_train_ds, range(0, 100))
     test_set = datasets.CIFAR10(
         ".", train=False, transform=test_transform, target_transform=None, download=True
     )
+
+    test_set = torch.utils.data.Subset(test_set, range(0, 100))
     eald_set = ExtendedActiveLearningDataset(train_ds)
 
     # active_set = ActiveLearningDataset(
@@ -159,8 +167,9 @@ class CIFAR10Net(nn.Module):
 
 def main():
     args = parse_args()
-    use_cuda = torch.cuda.is_available()
-    torch.backends.cudnn.benchmark = True
+    # use_cuda = torch.cuda.is_available()
+    # torch.backends.cudnn.benchmark = True
+    use_cuda = True
     random.seed(1337)
     torch.manual_seed(1337)
     if not use_cuda:
@@ -206,6 +215,7 @@ def main():
 
     if use_cuda:
         model.cuda()
+
     optimizer = optim.SGD(model.parameters(), lr=hyperparams["lr"], momentum=0.9)
 
     # Wraps the model into a usable API.
@@ -264,9 +274,28 @@ def main():
         metrics = model.metrics
         should_continue = active_loop.step()
 
-        oracle_indices, uncertainty = get_oracle_index_and_uncertainty(
-            active_loop, active_set
-        )
+        # every ten epochs calculate the uncertainty
+        if args.epoch % 10 == 0:
+            predictions = model.predict_on_dataset(
+                active_set._dataset,
+                batch_size=hyperparams["batch_size"],
+                iterations=hyperparams["iterations"],
+            )
+            uncertainty = active_loop.heuristic.get_uncertainties(predictions)
+            # save uncertainty and label map to csv
+            oracle_indices = uncertainty.argsort()
+            active_set.labelled_map
+            uncertainty_name = (
+                f"uncertainty_epoch={args.epoch}" f"_labelled={len(active_set)}.pkl"
+            )
+            pickle.dump(
+                {
+                    "oracle_indices": oracle_indices,
+                    "uncertainty": uncertainty,
+                    "labelled_map": active_set.labelled_map,
+                },
+                open(pjoin("uncertainties_augmented_cifarnet", uncertainty_name), "wb"),
+            )
 
         if not should_continue:
             break
@@ -305,23 +334,6 @@ def main():
         )
     tensorboardwriter.close()
     out_file.close()
-
-
-def get_oracle_index_and_uncertainty(active_loop, active_set):
-    probs = active_loop.get_probabilities(active_set.pool, **active_loop.kwargs)
-    pool_indices, uncertainty = active_loop.heuristic.get_ranks(probs)
-    oracle_indices = active_set._pool_to_oracle_index(pool_indices)
-
-    if torch.equal(
-        active_set.pool[pool_indices[0]][0], active_set._dataset[oracle_indices[0]][0]
-    ):
-        print("oracle and pool are in sync")
-        exit()
-    else:
-        print("not in sync")
-        exit()
-
-    return oracle_indices, uncertainty
 
 
 if __name__ == "__main__":
