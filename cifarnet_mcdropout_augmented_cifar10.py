@@ -277,6 +277,7 @@ def main():
                 active_set._dataset,
                 batch_size=hyperparams["batch_size"],
                 iterations=hyperparams["iterations"],
+                use_cuda=use_cuda,
             )
             uncertainty = active_loop.heuristic.get_uncertainties(predictions)
             # save uncertainty and label map to csv
