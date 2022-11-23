@@ -165,9 +165,8 @@ class CIFAR10Net(nn.Module):
 
 def main():
     args = parse_args()
-    # use_cuda = torch.cuda.is_available()
-    # torch.backends.cudnn.benchmark = True
-    use_cuda = True
+    use_cuda = torch.cuda.is_available()
+    torch.backends.cudnn.benchmark = True
     random.seed(1337)
     torch.manual_seed(1337)
     if not use_cuda:
