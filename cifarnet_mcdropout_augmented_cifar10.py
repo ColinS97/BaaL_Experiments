@@ -1,36 +1,34 @@
 import argparse
-import random
 import csv
+import datetime
+import os
+import pickle
+import random
 from copy import deepcopy
 from time import time
-import datetime
 
-from tensorboardX import SummaryWriter
+import numpy as np
 import torch
 import torch.backends
-from torch import optim
+import torch.nn.functional as F
+from baal import ModelWrapper
+from baal.active import ActiveLearningDataset, get_heuristic
+from baal.active.active_loop import ActiveLearningLoop
+from baal.bayesian.dropout import patch_module
+from baal.utils.metrics import Accuracy
+from tensorboardX import SummaryWriter
+from torch import nn, optim
 from torch.hub import load_state_dict_from_url
 from torch.nn import CrossEntropyLoss
 from torchvision import datasets
 from torchvision.models import vgg16
 from torchvision.transforms import transforms
 from tqdm import tqdm
-from torch import nn
-import torch.nn.functional as F
-import pickle
-
-from baal.active import get_heuristic, ActiveLearningDataset
-from baal.active.active_loop import ActiveLearningLoop
-from baal.bayesian.dropout import patch_module
-from baal import ModelWrapper
-from baal.utils.metrics import Accuracy
 
 pjoin = os.path.join
 
 import aug_lib
-
 from baal_extended.ExtendedActiveLearningDataset import ExtendedActiveLearningDataset
-
 
 """
 Minimal example to use BaaL.
@@ -283,7 +281,7 @@ def main():
             )
             uncertainty = active_loop.heuristic.get_uncertainties(predictions)
             # save uncertainty and label map to csv
-            oracle_indices = uncertainty.argsort()
+            oracle_indices = np.argsort(uncertainty)
             active_set.labelled_map
             uncertainty_name = (
                 f"uncertainty_epoch={args.epoch}" f"_labelled={len(active_set)}.pkl"
