@@ -7,7 +7,7 @@
 #SBATCH --mem=8000
 #SBATCH --mincpus=1
 #SBATCH --time=48:00:00                             
-#SBATCH --job-name=augmented_2_epoch_75
+#SBATCH --job-name=augmented_2_epoch_80
 #SBATCH --mail-type=end
 #SBATCH --mail-user=colin.simon@mailbox.tu-dresden.de
 #SBATCH --output=output-%j.out
@@ -24,4 +24,4 @@ create_or_reuse_environment
 
 cd /home/"$USER"/scratch/BaaL_EXPERIMENTS/
 
-python ../cifarnet_mcdropout_augmented_cifar10.py --augment 2 --epoch 75
+python ../cifarnet_mcdropout_augmented_cifar10.py --augment 2 --epoch 80
