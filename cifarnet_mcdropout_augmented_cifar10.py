@@ -272,7 +272,7 @@ def main():
         should_continue = active_loop.step()
 
         # every ten epochs calculate the uncertainty
-        if args.epoch % 10 == 0:
+        if epoch % 10 == 0:
             predictions = model.predict_on_dataset(
                 active_set._dataset,
                 batch_size=hyperparams["batch_size"],
@@ -284,7 +284,7 @@ def main():
             oracle_indices = np.argsort(uncertainty)
             active_set.labelled_map
             uncertainty_name = (
-                f"uncertainty_epoch={args.epoch}" f"_labelled={len(active_set)}.pkl"
+                f"uncertainty_epoch={epoch}" f"_labelled={len(active_set)}.pkl"
             )
             pickle.dump(
                 {
